@@ -16,6 +16,7 @@ from modules import extensions, shared, paths
 from modules.call_queue import wrap_gradio_gpu_call
 
 available_extensions = {"extensions": []}
+PROXY_HOST1 = '127.0.0.1:10809'
 
 
 def check_access():
@@ -142,7 +143,7 @@ def install_extension_from_url(dirname, url):
     try:
         shutil.rmtree(tmpdir, True)
 
-        repo = git.Repo.clone_from(url, tmpdir)
+        repo = git.Repo.clone_from(url, tmpdir, config=f'https.proxy="{PROXY_HOST1}"')
         repo.remote().fetch()
 
         try:
@@ -178,8 +179,12 @@ def install_extension_from_index(url, hide_tags, sort_column):
 def refresh_available_extensions(url, hide_tags, sort_column):
     global available_extensions
 
-    import urllib.request
-    with urllib.request.urlopen(url) as response:
+    from urllib import request
+    req = url if isinstance(url, request.Request) else request.Request(url)
+    req.set_proxy(f'{PROXY_HOST1}', 'http')
+    req.set_proxy(f'{PROXY_HOST1}', 'https')
+
+    with request.urlopen(req) as response:
         text = response.read()
 
     available_extensions = json.loads(text)
